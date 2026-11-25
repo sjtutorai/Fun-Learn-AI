@@ -1,0 +1,216 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Private player profile, progress metrics, avatar customization, friend code, and parent settings for FUNLEARN AI.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "nickname": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "friendCode": { "type": "string", "minLength": 6, "maxLength": 16, "pattern": "^[A-Z0-9\\-]+$" },
+        "gradeClass": { "type": "number" },
+        "avatarId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "accessoryId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "themeId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "xp": { "type": "number" },
+        "gems": { "type": "number" },
+        "level": { "type": "number" },
+        "streak": { "type": "number" },
+        "highFivesReceived": { "type": "number" },
+        "lastActiveDate": { "type": "string", "maxLength": 16 },
+        "gamesCompleted": { "type": "number" },
+        "learningMinutes": { "type": "number" },
+        "leaderboardOptIn": { "type": "boolean" },
+        "allowFriendRequests": { "type": "boolean" },
+        "selectedSubjects": { "type": "array" },
+        "unlockedAvatars": { "type": "array" },
+        "unlockedThemes": { "type": "array" },
+        "unlockedMissions": { "type": "array" },
+        "completedMissions": { "type": "array" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "nickname", "friendCode", "gradeClass", "avatarId", "xp", "level", "createdAt", "updatedAt"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public child-safe leaderboard card containing only nickname, avatar, XP, level, and badge count (zero PII).",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "nickname": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "avatarId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "accessoryId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "xp": { "type": "number" },
+        "weeklyXp": { "type": "number" },
+        "monthlyXp": { "type": "number" },
+        "level": { "type": "number" },
+        "badgesCount": { "type": "number" },
+        "optedIn": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "nickname", "avatarId", "xp", "weeklyXp", "monthlyXp", "level", "badgesCount", "optedIn", "updatedAt"]
+    },
+    "FriendCodeIndex": {
+      "title": "FriendCodeIndex",
+      "description": "Lookup document mapping an alphanumeric friend code to a child-safe nickname and avatar (no PII).",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string", "minLength": 6, "maxLength": 16, "pattern": "^[A-Z0-9\\-]+$" },
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "nickname": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "avatarId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "accessoryId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "level": { "type": "number" },
+        "recentBadges": { "type": "array" },
+        "allowRequests": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "uid", "nickname", "avatarId", "level", "allowRequests", "updatedAt"]
+    },
+    "FriendRequest": {
+      "title": "FriendRequest",
+      "description": "Safe friend request between two players initiated via alphanumeric friend code (no free-text messages).",
+      "type": "object",
+      "properties": {
+        "fromUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fromNickname": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "fromAvatarId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "fromLevel": { "type": "number" },
+        "toUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "toCode": { "type": "string", "minLength": 6, "maxLength": 16, "pattern": "^[A-Z0-9\\-]+$" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fromUid", "fromNickname", "fromAvatarId", "fromLevel", "toUid", "toCode", "status", "createdAt", "updatedAt"]
+    },
+    "HighFiveEvent": {
+      "title": "HighFiveEvent",
+      "description": "Positive one-tap High-Five encouragement event between friends (zero custom text).",
+      "type": "object",
+      "properties": {
+        "fromUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "fromNickname": { "type": "string", "minLength": 2, "maxLength": 24 },
+        "toUid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "cheerType": { "type": "string", "enum": ["high_five", "awesome_job", "keep_going"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["fromUid", "fromNickname", "toUid", "cheerType", "createdAt"]
+    },
+    "GameProgress": {
+      "title": "GameProgress",
+      "description": "Completed game session summary for a student.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "gameId": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "subject": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "completed": { "type": "boolean" },
+        "score": { "type": "number" },
+        "accuracy": { "type": "number" },
+        "xpEarned": { "type": "number" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "gameId", "completed", "score", "xpEarned", "completedAt"]
+    },
+    "AchievementRecord": {
+      "title": "AchievementRecord",
+      "description": "Unlocked achievement badge for a student.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "achievementId": { "type": "string", "minLength": 1, "maxLength": 64, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "unlocked": { "type": "boolean" },
+        "unlockedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "achievementId", "unlocked", "unlockedAt"]
+    },
+    "DailyChallengeRecord": {
+      "title": "DailyChallengeRecord",
+      "description": "Daily mixed challenge status keyed by local date YYYY-MM-DD.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "dateKey": { "type": "string", "minLength": 10, "maxLength": 10, "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+        "progress": { "type": "number" },
+        "completed": { "type": "boolean" },
+        "rewardClaimed": { "type": "boolean" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "dateKey", "progress", "completed", "rewardClaimed", "updatedAt"]
+    },
+    "RewardClaim": {
+      "title": "RewardClaim",
+      "description": "Immutable record of a claimed virtual scratch-and-win reward.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "minLength": 1, "maxLength": 128, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "rewardId": { "type": "string", "minLength": 1, "maxLength": 80, "pattern": "^[a-zA-Z0-9_\\-]+$" },
+        "rewardType": { "type": "string", "enum": ["xp", "gems", "avatar", "badge", "theme"] },
+        "rewardValue": { "type": "string", "minLength": 1, "maxLength": 64 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "rewardId", "rewardType", "rewardValue", "createdAt"]
+    },
+    "QuestionBankItem": {
+      "title": "QuestionBankItem",
+      "description": "Validated educational question stored in the question bank.",
+      "type": "object",
+      "properties": {
+        "question": { "type": "string", "minLength": 5, "maxLength": 500 },
+        "options": { "type": "array" },
+        "answer": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "explanation": { "type": "string", "minLength": 5, "maxLength": 400 },
+        "subject": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "classLevel": { "type": "number" },
+        "difficulty": { "type": "string", "enum": ["Easy", "Medium", "Hard", "Einstein Level"] },
+        "type": { "type": "string", "minLength": 2, "maxLength": 40 },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["question", "answer", "explanation", "subject", "classLevel", "difficulty", "type", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Private student profile and parent-controlled settings."
+    },
+    "/users/{uid}/gameProgress/{gameId}": {
+      "schema": { "$ref": "#/entities/GameProgress" },
+      "description": "Completed game sessions for the student."
+    },
+    "/users/{uid}/achievements/{achievementId}": {
+      "schema": { "$ref": "#/entities/AchievementRecord" },
+      "description": "Unlocked achievement badges for the student."
+    },
+    "/users/{uid}/dailyChallenges/{date}": {
+      "schema": { "$ref": "#/entities/DailyChallengeRecord" },
+      "description": "Daily mixed challenge progress and reward claim guard."
+    },
+    "/users/{uid}/rewards/{rewardId}": {
+      "schema": { "$ref": "#/entities/RewardClaim" },
+      "description": "Claimed virtual scratch card rewards (anti-duplicate ledger)."
+    },
+    "/leaderboard/{uid}": {
+      "schema": { "$ref": "#/entities/LeaderboardEntry" },
+      "description": "Public child-safe leaderboard entries (nicknames only, opt-in controlled by parents)."
+    },
+    "/friendCodes/{code}": {
+      "schema": { "$ref": "#/entities/FriendCodeIndex" },
+      "description": "Lookup table mapping alphanumeric friend codes to public child-safe profiles."
+    },
+    "/friendRequests/{requestId}": {
+      "schema": { "$ref": "#/entities/FriendRequest" },
+      "description": "Child-safe friend requests with zero direct messaging."
+    },
+    "/highFives/{highFiveId}": {
+      "schema": { "$ref": "#/entities/HighFiveEvent" },
+      "description": "Positive one-tap High-Five cheers between players."
+    },
+    "/questionBank/{questionId}": {
+      "schema": { "$ref": "#/entities/QuestionBankItem" },
+      "description": "Validated educational questions readable by signed-in students."
+    }
+  }
+}

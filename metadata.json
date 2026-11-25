@@ -1,0 +1,6 @@
+{
+  "name": "FUNLEARN AI",
+  "description": "An interactive 3D cartoon educational gaming platform for children aged 8–12. Think Smart. Play Hard. Learn More.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

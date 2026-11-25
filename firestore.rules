@@ -1,0 +1,336 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Pillar 0: Default Deny Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Shared Hardened Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(uid) {
+      return isVerified() && request.auth.uid == uid;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidCode(code) {
+      return code is string && code.size() >= 6 && code.size() <= 16 && code.matches('^[A-Z0-9\\-]+$');
+    }
+
+    function isValidDateKey(dateKey) {
+      return dateKey is string && dateKey.size() == 10 && dateKey.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isBoundedStringList(arr, maxLen) {
+      return arr is list && arr.size() <= maxLen && (arr.size() == 0 || (arr[0] is string && arr[0].size() <= 64));
+    }
+
+    // Entity Validation Blueprints (Pillar 2)
+    function isValidUserProfile(data, uid) {
+      return data.keys().hasAll(['uid', 'nickname', 'friendCode', 'gradeClass', 'avatarId', 'xp', 'level', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly([
+          'uid', 'nickname', 'friendCode', 'gradeClass', 'avatarId', 'accessoryId', 'themeId',
+          'xp', 'gems', 'level', 'streak', 'highFivesReceived', 'lastActiveDate',
+          'gamesCompleted', 'learningMinutes', 'leaderboardOptIn', 'allowFriendRequests',
+          'selectedSubjects', 'unlockedAvatars', 'unlockedThemes', 'unlockedMissions',
+          'completedMissions', 'createdAt', 'updatedAt'
+        ])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && data.nickname is string && data.nickname.size() >= 2 && data.nickname.size() <= 24
+        && isValidCode(data.friendCode)
+        && data.gradeClass is int && data.gradeClass >= 3 && data.gradeClass <= 7
+        && data.avatarId is string && data.avatarId.size() >= 1 && data.avatarId.size() <= 40
+        && (!('accessoryId' in data) || (data.accessoryId is string && data.accessoryId.size() <= 40))
+        && (!('themeId' in data) || (data.themeId is string && data.themeId.size() <= 40))
+        && data.xp is int && data.xp >= 0 && data.xp <= 1000000
+        && (!('gems' in data) || (data.gems is int && data.gems >= 0 && data.gems <= 100000))
+        && data.level is int && data.level >= 1 && data.level <= 5
+        && (!('streak' in data) || (data.streak is int && data.streak >= 0 && data.streak <= 3650))
+        && (!('highFivesReceived' in data) || (data.highFivesReceived is int && data.highFivesReceived >= 0))
+        && (!('lastActiveDate' in data) || (data.lastActiveDate is string && data.lastActiveDate.size() <= 16))
+        && (!('gamesCompleted' in data) || (data.gamesCompleted is int && data.gamesCompleted >= 0))
+        && (!('learningMinutes' in data) || (data.learningMinutes is int && data.learningMinutes >= 0))
+        && (!('leaderboardOptIn' in data) || data.leaderboardOptIn is bool)
+        && (!('allowFriendRequests' in data) || data.allowFriendRequests is bool)
+        && (!('selectedSubjects' in data) || isBoundedStringList(data.selectedSubjects, 10))
+        && (!('unlockedAvatars' in data) || isBoundedStringList(data.unlockedAvatars, 20))
+        && (!('unlockedThemes' in data) || isBoundedStringList(data.unlockedThemes, 10))
+        && (!('unlockedMissions' in data) || isBoundedStringList(data.unlockedMissions, 40))
+        && (!('completedMissions' in data) || isBoundedStringList(data.completedMissions, 40))
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidGameProgress(data, uid) {
+      return data.keys().hasAll(['uid', 'gameId', 'completed', 'score', 'xpEarned', 'completedAt'])
+        && data.keys().hasOnly(['uid', 'gameId', 'subject', 'completed', 'score', 'accuracy', 'xpEarned', 'completedAt'])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && data.gameId is string && data.gameId.size() >= 1 && data.gameId.size() <= 40
+        && (!('subject' in data) || (data.subject is string && data.subject.size() <= 40))
+        && data.completed is bool
+        && data.score is int && data.score >= 0 && data.score <= 10000
+        && (!('accuracy' in data) || (data.accuracy is int && data.accuracy >= 0 && data.accuracy <= 100))
+        && data.xpEarned is int && data.xpEarned >= 0 && data.xpEarned <= 500
+        && data.completedAt is timestamp;
+    }
+
+    function isValidAchievement(data, uid, achievementId) {
+      return data.keys().hasAll(['uid', 'achievementId', 'unlocked', 'unlockedAt'])
+        && data.keys().hasOnly(['uid', 'achievementId', 'unlocked', 'unlockedAt'])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && data.achievementId == achievementId
+        && data.unlocked == true
+        && data.unlockedAt is timestamp;
+    }
+
+    function isValidDailyChallenge(data, uid, dateKey) {
+      return data.keys().hasAll(['uid', 'dateKey', 'progress', 'completed', 'rewardClaimed', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'dateKey', 'progress', 'completed', 'rewardClaimed', 'updatedAt'])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && data.dateKey == dateKey
+        && data.progress is int && data.progress >= 0 && data.progress <= 5
+        && data.completed is bool
+        && data.rewardClaimed is bool
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidRewardClaim(data, uid, rewardId) {
+      return data.keys().hasAll(['uid', 'rewardId', 'rewardType', 'rewardValue', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'rewardId', 'rewardType', 'rewardValue', 'createdAt'])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && data.rewardId == rewardId
+        && data.rewardType in ['xp', 'gems', 'avatar', 'badge', 'theme']
+        && data.rewardValue is string && data.rewardValue.size() >= 1 && data.rewardValue.size() <= 64
+        && data.createdAt == request.time;
+    }
+
+    function isValidLeaderboardEntry(data, uid) {
+      return data.keys().hasAll(['uid', 'nickname', 'avatarId', 'xp', 'weeklyXp', 'monthlyXp', 'level', 'badgesCount', 'optedIn', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'nickname', 'avatarId', 'accessoryId', 'xp', 'weeklyXp', 'monthlyXp', 'level', 'badgesCount', 'optedIn', 'updatedAt'])
+        && data.uid == uid
+        && data.uid == request.auth.uid
+        && data.nickname is string && data.nickname.size() >= 2 && data.nickname.size() <= 24
+        && data.avatarId is string && data.avatarId.size() >= 1 && data.avatarId.size() <= 40
+        && (!('accessoryId' in data) || (data.accessoryId is string && data.accessoryId.size() <= 40))
+        && data.xp is int && data.xp >= 0 && data.xp <= 1000000
+        && data.weeklyXp is int && data.weeklyXp >= 0 && data.weeklyXp <= 1000000
+        && data.monthlyXp is int && data.monthlyXp >= 0 && data.monthlyXp <= 1000000
+        && data.level is int && data.level >= 1 && data.level <= 5
+        && data.badgesCount is int && data.badgesCount >= 0 && data.badgesCount <= 100
+        && data.optedIn is bool
+        && data.updatedAt == request.time;
+    }
+
+    function isValidFriendCodeIndex(data, code) {
+      return data.keys().hasAll(['code', 'uid', 'nickname', 'avatarId', 'level', 'allowRequests', 'updatedAt'])
+        && data.keys().hasOnly(['code', 'uid', 'nickname', 'avatarId', 'accessoryId', 'level', 'recentBadges', 'allowRequests', 'updatedAt'])
+        && data.code == code
+        && data.uid == request.auth.uid
+        && data.nickname is string && data.nickname.size() >= 2 && data.nickname.size() <= 24
+        && data.avatarId is string && data.avatarId.size() >= 1 && data.avatarId.size() <= 40
+        && (!('accessoryId' in data) || (data.accessoryId is string && data.accessoryId.size() <= 40))
+        && data.level is int && data.level >= 1 && data.level <= 5
+        && (!('recentBadges' in data) || isBoundedStringList(data.recentBadges, 10))
+        && data.allowRequests is bool
+        && data.updatedAt == request.time;
+    }
+
+    function isValidFriendRequest(data) {
+      return data.keys().hasAll(['fromUid', 'fromNickname', 'fromAvatarId', 'fromLevel', 'toUid', 'toCode', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['fromUid', 'fromNickname', 'fromAvatarId', 'fromLevel', 'toUid', 'toCode', 'status', 'createdAt', 'updatedAt'])
+        && isValidId(data.fromUid)
+        && isValidId(data.toUid)
+        && data.fromUid != data.toUid
+        && data.fromNickname is string && data.fromNickname.size() >= 2 && data.fromNickname.size() <= 24
+        && data.fromAvatarId is string && data.fromAvatarId.size() >= 1 && data.fromAvatarId.size() <= 40
+        && data.fromLevel is int && data.fromLevel >= 1 && data.fromLevel <= 5
+        && isValidCode(data.toCode)
+        && data.status in ['pending', 'accepted', 'declined']
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidHighFive(data) {
+      return data.keys().hasAll(['fromUid', 'fromNickname', 'toUid', 'cheerType', 'createdAt'])
+        && data.keys().hasOnly(['fromUid', 'fromNickname', 'toUid', 'cheerType', 'createdAt'])
+        && data.fromUid == request.auth.uid
+        && isValidId(data.toUid)
+        && data.fromUid != data.toUid
+        && data.fromNickname is string && data.fromNickname.size() >= 2 && data.fromNickname.size() <= 24
+        && data.cheerType in ['high_five', 'awesome_job', 'keep_going']
+        && data.createdAt == request.time;
+    }
+
+    // 1. Private User Profile & Subcollections (Pillar 1 & 6: Owner-Only + Master Gate)
+    match /users/{uid} {
+      allow get: if isValidId(uid) && isOwner(uid);
+      allow list: if false;
+      allow create: if isValidId(uid) && isOwner(uid)
+        && isValidUserProfile(incoming(), uid)
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time;
+      allow update: if isValidId(uid) && isOwner(uid)
+        && isValidUserProfile(incoming(), uid)
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().xp >= existing().xp
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'nickname', 'gradeClass', 'avatarId', 'accessoryId', 'themeId',
+          'xp', 'gems', 'level', 'streak', 'highFivesReceived', 'lastActiveDate',
+          'gamesCompleted', 'learningMinutes', 'leaderboardOptIn', 'allowFriendRequests',
+          'selectedSubjects', 'unlockedAvatars', 'unlockedThemes', 'unlockedMissions',
+          'completedMissions', 'updatedAt'
+        ]);
+      allow delete: if isValidId(uid) && isOwner(uid);
+
+      match /gameProgress/{gameId} {
+        allow get: if isValidId(uid) && isValidId(gameId) && isOwner(uid);
+        allow list: if isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(gameId) && isOwner(uid)
+          && isValidGameProgress(incoming(), uid)
+          && incoming().completedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if false;
+        allow delete: if isValidId(uid) && isValidId(gameId) && isOwner(uid);
+      }
+
+      match /achievements/{achievementId} {
+        allow get: if isValidId(uid) && isValidId(achievementId) && isOwner(uid);
+        allow list: if isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(achievementId) && isOwner(uid)
+          && isValidAchievement(incoming(), uid, achievementId)
+          && incoming().unlockedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if false;
+        allow delete: if isValidId(uid) && isValidId(achievementId) && isOwner(uid);
+      }
+
+      match /dailyChallenges/{dateKey} {
+        allow get: if isValidId(uid) && isValidDateKey(dateKey) && isOwner(uid);
+        allow list: if isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidDateKey(dateKey) && isOwner(uid)
+          && isValidDailyChallenge(incoming(), uid, dateKey)
+          && incoming().updatedAt == request.time
+          && exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if isValidId(uid) && isValidDateKey(dateKey) && isOwner(uid)
+          && isValidDailyChallenge(incoming(), uid, dateKey)
+          && existing().rewardClaimed == false
+          && incoming().uid == existing().uid
+          && incoming().dateKey == existing().dateKey
+          && incoming().updatedAt == request.time
+          && incoming().diff(existing()).affectedKeys().hasOnly(['progress', 'completed', 'rewardClaimed', 'updatedAt']);
+        allow delete: if isValidId(uid) && isValidDateKey(dateKey) && isOwner(uid);
+      }
+
+      match /rewards/{rewardId} {
+        allow get: if isValidId(uid) && isValidId(rewardId) && isOwner(uid);
+        allow list: if isOwner(uid) && resource.data.uid == request.auth.uid;
+        allow create: if isValidId(uid) && isValidId(rewardId) && isOwner(uid)
+          && isValidRewardClaim(incoming(), uid, rewardId)
+          && exists(/databases/$(database)/documents/users/$(uid));
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    // 2. Public Child-Safe Leaderboard (Pillar 6 & 8: Zero PII, Opt-In Enforced)
+    match /leaderboard/{uid} {
+      allow get: if isValidId(uid) && isSignedIn() && (resource.data.optedIn == true || request.auth.uid == uid);
+      allow list: if isSignedIn() && resource.data.optedIn == true;
+      allow create: if isValidId(uid) && isOwner(uid) && isValidLeaderboardEntry(incoming(), uid);
+      allow update: if isValidId(uid) && isOwner(uid)
+        && isValidLeaderboardEntry(incoming(), uid)
+        && incoming().uid == existing().uid
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'nickname', 'avatarId', 'accessoryId', 'xp', 'weeklyXp', 'monthlyXp', 'level', 'badgesCount', 'optedIn', 'updatedAt'
+        ]);
+      allow delete: if isValidId(uid) && isOwner(uid);
+    }
+
+    // 3. Alphanumeric Friend Code Lookup (No List Enumeration — Exact Code Get Only)
+    match /friendCodes/{code} {
+      allow get: if isValidCode(code) && isSignedIn();
+      allow list: if false;
+      allow create: if isValidCode(code) && isVerified() && isValidFriendCodeIndex(incoming(), code);
+      allow update: if isValidCode(code) && isVerified()
+        && isValidFriendCodeIndex(incoming(), code)
+        && existing().uid == request.auth.uid
+        && incoming().uid == existing().uid
+        && incoming().code == existing().code
+        && incoming().diff(existing()).affectedKeys().hasOnly([
+          'nickname', 'avatarId', 'accessoryId', 'level', 'recentBadges', 'allowRequests', 'updatedAt'
+        ]);
+      allow delete: if isValidCode(code) && isVerified() && existing().uid == request.auth.uid;
+    }
+
+    // 4. Child-Safe Friend Requests (No Custom Messaging, Terminal State Locked)
+    match /friendRequests/{requestId} {
+      allow get: if isValidId(requestId) && isVerified()
+        && (existing().fromUid == request.auth.uid || existing().toUid == request.auth.uid);
+      allow list: if isVerified()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isValidId(requestId) && isVerified()
+        && isValidFriendRequest(incoming())
+        && incoming().fromUid == request.auth.uid
+        && incoming().status == 'pending'
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && exists(/databases/$(database)/documents/friendCodes/$(incoming().toCode));
+      allow update: if isValidId(requestId) && isVerified()
+        && isValidFriendRequest(incoming())
+        && existing().toUid == request.auth.uid
+        && existing().status == 'pending'
+        && incoming().status in ['accepted', 'declined']
+        && incoming().fromUid == existing().fromUid
+        && incoming().toUid == existing().toUid
+        && incoming().toCode == existing().toCode
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']);
+      allow delete: if isValidId(requestId) && isVerified()
+        && (existing().fromUid == request.auth.uid || existing().toUid == request.auth.uid);
+    }
+
+    // 5. Positive High-Five Cheers (Enum Only, Immutable)
+    match /highFives/{highFiveId} {
+      allow get: if isValidId(highFiveId) && isVerified()
+        && (existing().fromUid == request.auth.uid || existing().toUid == request.auth.uid);
+      allow list: if isVerified()
+        && (resource.data.fromUid == request.auth.uid || resource.data.toUid == request.auth.uid);
+      allow create: if isValidId(highFiveId) && isVerified() && isValidHighFive(incoming());
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    // 6. Validated Question Bank (Read-Only for Signed-In Students)
+    match /questionBank/{questionId} {
+      allow get: if isValidId(questionId) && isSignedIn();
+      allow list: if isSignedIn() && resource.data.classLevel >= 3 && resource.data.classLevel <= 7;
+      allow write: if false;
+    }
+  }
+}

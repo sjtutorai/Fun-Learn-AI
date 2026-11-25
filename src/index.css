@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: "Fredoka", ui-rounded, system-ui, sans-serif;
+  --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-sans);
+    background-color: #f3f7ff;
+    color: #172038;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+    text-wrap: balance;
+  }
+
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]) {
+    cursor: pointer;
+  }
+}
+
+/* Tactile 3D Cartoon Game Button */
+.btn-3d {
+  transition: transform 140ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 140ms cubic-bezier(0.16, 1, 0.3, 1), filter 140ms ease;
+}
+
+.btn-3d:hover:not(:disabled) {
+  transform: translateY(-2px);
+  filter: brightness(1.03);
+}
+
+.btn-3d:active:not(:disabled) {
+  transform: translateY(3px);
+}
+
+/* Soft storybook 3D card surface */
+.card-toy {
+  background: #ffffff;
+  border: 2px solid #e2e8f8;
+  box-shadow: 0 6px 0 #dce4f7, 0 14px 28px -12px rgba(23, 32, 56, 0.14);
+}
+
+.card-toy-hover {
+  transition: transform 180ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 180ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-toy-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 0 #d5dff6, 0 22px 36px -14px rgba(23, 32, 56, 0.2);
+}
+
+/* Game Feedback Animations */
+@keyframes fun-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px) rotate(-1deg); }
+  40% { transform: translateX(7px) rotate(1deg); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+@keyframes fun-float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-9px) rotate(4deg); }
+}
+
+@keyframes fun-pop {
+  0% { transform: scale(0.75); opacity: 0; }
+  65% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes fun-confetti-fall {
+  0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+.animate-fun-shake {
+  animation: fun-shake 420ms cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+.animate-fun-float {
+  animation: fun-float 4.2s ease-in-out infinite;
+}
+
+.animate-fun-pop {
+  animation: fun-pop 340ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Reduced motion accessibility support */
+.reduced-motion *,
+.reduced-motion *::before,
+.reduced-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-fun-float,
+  .animate-bounce,
+  .animate-pulse {
+    animation: none !important;
+  }
+}
+
+/* Game Theme Accent Surfaces */
+.theme-sky {
+  --app-canvas: linear-gradient(180deg, #eff6ff 0%, #f8faff 55%, #fefce8 100%);
+}
+.theme-galaxy {
+  --app-canvas: linear-gradient(180deg, #eef2ff 0%, #f5f3ff 55%, #ecfeff 100%);
+}
+.theme-jungle {
+  --app-canvas: linear-gradient(180deg, #ecfdf5 0%, #f0fdf4 55%, #fefce8 100%);
+}
+.theme-candy {
+  --app-canvas: linear-gradient(180deg, #fff1f2 0%, #fff7ed 55%, #fef9c3 100%);
+}
+
+.app-canvas-bg {
+  background: var(--app-canvas, linear-gradient(180deg, #eff6ff 0%, #f8faff 55%, #fefce8 100%));
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
